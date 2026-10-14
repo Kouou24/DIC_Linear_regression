@@ -8,12 +8,20 @@
 
 ---
 
+## 🔗 專案連結與線上展示 (Links & Live Demo)
+
+* 🌐 **GitHub Pages (Live Demo)**: [https://kouou24.github.io/DIC_Linear_regression/](https://kouou24.github.io/DIC_Linear_regression/)
+* 📦 **GitHub Repository**: [https://github.com/Kouou24/DIC_Linear_regression](https://github.com/Kouou24/DIC_Linear_regression)
+
+---
+
 ## 🌐 互動展示網頁 (Interactive Demo)
 
 本專案附帶可獨立執行的互動式網頁應用程式，具備 **雙資料集即時切換下拉式選單**、**Chart.js 動態走勢圖**、**Top 5 演算法多線切換比對** 與 **即時推論計算機 (Inference Calculator)**。
 
-* **本地即時預覽**：直接雙擊開啟工作目錄中的 [`index.html`](./index.html)。
-* **本地 HTTP 伺服器啟動方式**（推薦）：
+* 🚀 **線上直接體驗 (GitHub Pages)**: [https://kouou24.github.io/DIC_Linear_regression/](https://kouou24.github.io/DIC_Linear_regression/)
+* 💻 **本地即時預覽**：直接雙擊開啟工作目錄中的 [`index.html`](./index.html)。
+* 🖥️ **本地 HTTP 伺服器啟動方式**：
   ```powershell
   python -m http.server 8000
   ```
