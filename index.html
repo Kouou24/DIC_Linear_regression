@@ -3,11 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>50 Startups 多元線性迴歸與特徵選擇互動儀表板</title>
+  <title>多元線性迴歸與特徵選擇互動分析儀表板 (50 Startups & Boston Housing)</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Chart.js CDN with fallback -->
+  <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- 載入預計算特徵選擇進程資料 -->
+  <script src="model_data.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
     body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
@@ -17,23 +19,36 @@
 <body class="bg-slate-900 text-slate-100 min-h-screen antialiased flex flex-col">
 
   <!-- 頂部導覽列 -->
-  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap justify-between items-center gap-3">
+  <header class="border-b border-slate-800 bg-slate-900/95 backdrop-blur sticky top-0 z-50 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap justify-between items-center gap-3">
+      
+      <!-- 標題與資料集切換選單區塊 -->
       <div class="flex items-center space-x-3">
-        <div class="w-9 h-9 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center font-bold text-white shadow-md">
+        <div id="datasetBadge" class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center font-extrabold text-white shadow-lg text-sm transition-all duration-300">
           50
         </div>
         <div>
-          <h1 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-            50 Startups 獲利預測與特徵選擇分析
-            <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">CRISP-DM</span>
-          </h1>
-          <p class="text-xs text-slate-400">Multiple Linear Regression & Feature Selection (k=1..5) Diagnostic Studio</p>
+          <div class="flex items-center gap-2 flex-wrap">
+            <!-- 核心：資料集切換下拉式選單 -->
+            <div class="relative inline-block">
+              <select id="datasetSelect" onchange="switchDataset(this.value)" class="bg-slate-800 hover:bg-slate-700/80 border border-blue-500/50 text-white font-bold text-sm sm:text-base rounded-lg pl-3 pr-8 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer transition shadow appearance-none">
+                <option value="startups" selected>🏢 50 Startups (新創獲利預測 - 50_Startups.csv)</option>
+                <option value="boston">🏡 Boston Housing (波士頓房價預測 - BostonHousing.csv)</option>
+              </select>
+              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-blue-400">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
+              </div>
+            </div>
+            
+            <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">CRISP-DM</span>
+            <span id="datasetSourceTag" class="text-[11px] text-slate-400 hidden sm:inline bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700/60">50_Startups.csv</span>
+          </div>
+          <p id="datasetSubtitle" class="text-xs text-slate-400 mt-1">Multiple Linear Regression & Feature Selection (k=1..5) Diagnostic Studio</p>
         </div>
       </div>
 
       <!-- CRISP-DM 導覽標籤 -->
-      <div class="hidden md:flex items-center gap-1 text-xs bg-slate-800/80 p-1 rounded-lg border border-slate-700/60">
+      <div class="hidden lg:flex items-center gap-1 text-xs bg-slate-800/80 p-1 rounded-lg border border-slate-700/60">
         <span class="px-2 py-1 rounded bg-slate-700/60 text-slate-300">1. Business</span>
         <span class="text-slate-500">→</span>
         <span class="px-2 py-1 rounded bg-slate-700/60 text-slate-300">2. Data</span>
@@ -56,63 +71,62 @@
       <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 relative overflow-hidden">
         <div class="text-xs text-slate-400 font-medium">最佳判定係數 (Max R²)</div>
         <div class="text-2xl font-bold text-emerald-400 mt-1 flex items-baseline gap-2">
-          0.9474
-          <span class="text-xs font-medium text-emerald-300 bg-emerald-500/10 px-1.5 py-0.5 rounded">+0.0127 vs 全特徵</span>
+          <span id="kpi_max_r2">0.9474</span>
+          <span id="kpi_max_r2_diff" class="text-xs font-medium text-emerald-300 bg-emerald-500/10 px-1.5 py-0.5 rounded">+0.0127 vs 全特徵</span>
         </div>
-        <div class="text-xs text-slate-400 mt-1">出現在特徵數 k=2 (Sweet Spot)</div>
+        <div id="kpi_sweet_k_desc" class="text-xs text-slate-400 mt-1">出現在特徵數 k=2 (Sweet Spot)</div>
         <div class="absolute -right-3 -bottom-3 w-16 h-16 bg-emerald-500/10 rounded-full blur-xl pointer-events-none"></div>
       </div>
 
       <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 relative overflow-hidden">
         <div class="text-xs text-slate-400 font-medium">最低均方根誤差 (Min RMSE)</div>
         <div class="text-2xl font-bold text-blue-400 mt-1 flex items-baseline gap-2">
-          $8,198.80
-          <span class="text-xs font-medium text-blue-300 bg-blue-500/10 px-1.5 py-0.5 rounded">-$939.19</span>
+          <span id="kpi_min_rmse">$8,198.80</span>
+          <span id="kpi_min_rmse_diff" class="text-xs font-medium text-blue-300 bg-blue-500/10 px-1.5 py-0.5 rounded">-$939.19</span>
         </div>
-        <div class="text-xs text-slate-400 mt-1">相較全特徵模型 ($9,137.99) 誤差大減</div>
+        <div id="kpi_rmse_desc" class="text-xs text-slate-400 mt-1">相較全特徵基準模型誤差顯著下降</div>
         <div class="absolute -right-3 -bottom-3 w-16 h-16 bg-blue-500/10 rounded-full blur-xl pointer-events-none"></div>
       </div>
 
       <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 relative overflow-hidden">
         <div class="text-xs text-slate-400 font-medium">黃金特徵組合 (Golden Features)</div>
-        <div class="text-lg font-bold text-amber-300 mt-1 truncate">
+        <div id="kpi_golden_features" class="text-lg font-bold text-amber-300 mt-1 truncate">
           R&D + Marketing
         </div>
-        <div class="text-xs text-slate-400 mt-1">研發支出與行銷支出雙引擎</div>
+        <div id="kpi_golden_desc" class="text-xs text-slate-400 mt-1">研發支出與行銷支出雙引擎</div>
         <div class="absolute -right-3 -bottom-3 w-16 h-16 bg-amber-500/10 rounded-full blur-xl pointer-events-none"></div>
       </div>
 
       <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 relative overflow-hidden">
         <div class="text-xs text-slate-400 font-medium">特徵精簡率 (Model Sparsity)</div>
         <div class="text-2xl font-bold text-indigo-400 mt-1 flex items-baseline gap-2">
-          60%
-          <span class="text-xs font-medium text-indigo-300 bg-indigo-500/10 px-1.5 py-0.5 rounded">5 特徵 → 2 特徵</span>
+          <span id="kpi_sparsity">60%</span>
+          <span id="kpi_sparsity_tag" class="text-xs font-medium text-indigo-300 bg-indigo-500/10 px-1.5 py-0.5 rounded">5 特徵 → 2 特徵</span>
         </div>
-        <div class="text-xs text-slate-400 mt-1">自動排除行政支出與地理位置雜訊</div>
+        <div id="kpi_sparsity_desc" class="text-xs text-slate-400 mt-1">自動剔除多重共線性與雜訊變數</div>
         <div class="absolute -right-3 -bottom-3 w-16 h-16 bg-indigo-500/10 rounded-full blur-xl pointer-events-none"></div>
       </div>
     </section>
 
-    <!-- 核心視覺化區塊：特徵數量 vs 模型效能 (重現並拓展使用者圖片) -->
+    <!-- 核心視覺化區塊：特徵數量 vs 模型效能 (支援雙資料集演算法切換) -->
     <section class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5 shadow-sm space-y-4">
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-700/60 pb-4">
         <div>
           <h2 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-            <span> 特徵數量 vs 模型表現曲線 (k=1..5 Performance Curves)</span>
+            <span>📈 特徵數量 vs 模型表現曲線 (<span id="chartKRangeTitle">k=1..5</span> Performance Curves)</span>
           </h2>
-          <p class="text-xs text-slate-400 mt-0.5">點擊下方按鈕或選單，即時切換比對 5 大特徵選擇演算法在各特徵數下的變化趨勢</p>
+          <p class="text-xs text-slate-400 mt-0.5">即時切換比對 5 大特徵選擇演算法在各特徵數下的變化趨勢，驗證甜點區</p>
         </div>
 
         <!-- 演算法切換器 -->
         <div class="flex items-center gap-2">
           <label for="methodSelect" class="text-xs text-slate-400 whitespace-nowrap">選擇演算法:</label>
-          <select id="methodSelect" onchange="updateCharts()" class="bg-slate-700/80 border border-slate-600 text-xs rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="user_ref" selected>使用者參考基準 (User Reference)</option>
-            <option value="skb">1. Filter: SelectKBest (F-test)</option>
-            <option value="sfs">2. Wrapper: SFS (Forward 逐步選擇)</option>
-            <option value="rfe">3. Wrapper: RFE (遞迴消除法)</option>
-            <option value="lasso">4. Embedded: Lasso (L1 正則化)</option>
-            <option value="rf">5. Embedded: Random Forest (樹模型重要度)</option>
+          <select id="methodSelect" onchange="updateCharts()" class="bg-slate-700/80 border border-slate-600 text-xs rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+            <option value="forward_sfs" selected>1. Wrapper: SFS (Forward 逐步選擇)</option>
+            <option value="rfe">2. Wrapper: RFE (遞迴消除法)</option>
+            <option value="lasso_l1_ranking">3. Embedded: Lasso (L1 正則化)</option>
+            <option value="elasticnet_ranking">4. Embedded: ElasticNet (彈性網絡)</option>
+            <option value="exhaustive_search">5. Exhaustive Search (最佳子集窮舉)</option>
             <option value="all_compare">⚡ 疊加全 5 種方法同步對比</option>
           </select>
         </div>
@@ -124,7 +138,7 @@
         <div class="bg-slate-900/70 border border-slate-800 rounded-lg p-4">
           <div class="flex justify-between items-center mb-2">
             <span class="text-xs font-semibold text-slate-300">RMSE by Number of Features (越低越好)</span>
-            <span class="text-[11px] text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded">谷底: k=2 ($8,198.80)</span>
+            <span id="chartRmseBadge" class="text-[11px] text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded font-mono">谷底: k=2 ($8,198.80)</span>
           </div>
           <div class="h-64 relative">
             <canvas id="rmseChart"></canvas>
@@ -135,7 +149,7 @@
         <div class="bg-slate-900/70 border border-slate-800 rounded-lg p-4">
           <div class="flex justify-between items-center mb-2">
             <span class="text-xs font-semibold text-slate-300">R-squared by Number of Features (越高越好)</span>
-            <span class="text-[11px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">高峰: k=2 (0.9474)</span>
+            <span id="chartR2Badge" class="text-[11px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded font-mono">高峰: k=2 (0.9474)</span>
           </div>
           <div class="h-64 relative">
             <canvas id="r2Chart"></canvas>
@@ -146,8 +160,8 @@
       <!-- 當前選定演算法之逐步特徵明細面板 -->
       <div class="bg-slate-900/50 border border-slate-800 rounded-lg p-4">
         <h3 class="text-xs font-semibold text-slate-300 mb-2 flex items-center justify-between">
-          <span id="detailPanelTitle">使用者參考基準 — 各特徵數量選定組合與數據</span>
-          <span class="text-[11px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded font-normal">甜點區：特徵數 = 2</span>
+          <span id="detailPanelTitle">各特徵數量選定組合與指標</span>
+          <span id="sweetSpotPill" class="text-[11px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded font-normal">甜點區：特徵數 = 2</span>
         </h3>
         <div class="overflow-x-auto">
           <table class="w-full text-left text-xs">
@@ -159,7 +173,7 @@
                 <th class="py-2 px-3 text-right rounded-r">判定係數 (R²)</th>
               </tr>
             </thead>
-            <tbody id="detailTableBody" class="divide-y divide-slate-800 text-slate-300">
+            <tbody id="detailTableBody" class="divide-y divide-slate-800 text-slate-300 font-mono">
               <!-- 動態渲染 -->
             </tbody>
           </table>
@@ -167,7 +181,7 @@
       </div>
     </section>
 
-    <!-- 即時線上新創公司利潤預測模擬器 -->
+    <!-- 即時線上推論模擬器 (自適應切換 50 Startups / Boston Housing 控制面板) -->
     <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
       
       <!-- 左側：輸入控制面板 (7 cols) -->
@@ -175,14 +189,15 @@
         <div class="border-b border-slate-700/60 pb-3 flex justify-between items-center">
           <div>
             <h2 class="text-base font-bold text-white flex items-center gap-2">
-              <span> 互動式新創利潤推論模擬器 (Live Inference Simulator)</span>
+              <span id="simulatorTitle">🎮 互動式推論模擬器 (Live Inference Simulator)</span>
             </h2>
-            <p class="text-xs text-slate-400">調整資金配置，即時觀察全特徵模型 vs 最佳精簡模型 (k=2) 的預測表現</p>
+            <p id="simulatorDesc" class="text-xs text-slate-400">調整輸入數值，即時觀察全特徵基準模型 vs 最佳精簡模型的預測輸出與差異</p>
           </div>
           <button onclick="resetInputs()" class="text-xs px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition">重設預設值</button>
         </div>
 
-        <div class="space-y-4 text-xs">
+        <!-- 50 Startups 輸入面板 -->
+        <div id="sim_panel_startups" class="space-y-4 text-xs">
           <!-- 研發支出 -->
           <div class="space-y-1">
             <div class="flex justify-between">
@@ -206,7 +221,7 @@
           <!-- 行政管理 -->
           <div class="space-y-1">
             <div class="flex justify-between">
-              <span class="font-medium text-slate-300">行政管理支出 (Administration) <span class="text-slate-400 text-[11px]">(微弱負向相關，雜訊來源)</span></span>
+              <span class="font-medium text-slate-300">行政管理支出 (Administration) <span class="text-slate-400 text-[11px]">(微弱負向相關，統計雜訊)</span></span>
               <span id="val_adm" class="font-bold text-slate-300 text-sm">$100,000</span>
             </div>
             <input id="slider_adm" type="range" min="0" max="200000" step="5000" value="100000" oninput="calculatePrediction()" class="w-full accent-slate-500">
@@ -223,67 +238,136 @@
             </div>
           </div>
         </div>
+
+        <!-- Boston Housing 輸入面板 -->
+        <div id="sim_panel_boston" class="space-y-4 text-xs hidden">
+          <!-- 房間數 (RM) -->
+          <div class="space-y-1">
+            <div class="flex justify-between">
+              <span class="font-medium text-slate-300">平均房間數 (RM) <span class="text-emerald-400 font-bold">*核心正向驅動 (+4.38k / 間)</span></span>
+              <span id="val_rm" class="font-bold text-emerald-400 text-sm">6.2 間</span>
+            </div>
+            <input id="slider_rm" type="range" min="3.5" max="8.8" step="0.1" value="6.2" oninput="calculatePrediction()" class="w-full accent-emerald-500">
+            <div class="flex justify-between text-[10px] text-slate-500"><span>3.5 間</span><span>6.0 間</span><span>8.8 間</span></div>
+          </div>
+
+          <!-- 低社經人口比 (LSTAT) -->
+          <div class="space-y-1">
+            <div class="flex justify-between">
+              <span class="font-medium text-slate-300">低所得階層比例 (LSTAT) <span class="text-rose-400 font-bold">*最強負向驅動 (-0.58k / %)</span></span>
+              <span id="val_lstat" class="font-bold text-rose-400 text-sm">12.5%</span>
+            </div>
+            <input id="slider_lstat" type="range" min="1.5" max="38.0" step="0.5" value="12.5" oninput="calculatePrediction()" class="w-full accent-rose-500">
+            <div class="flex justify-between text-[10px] text-slate-500"><span>1.5%</span><span>20.0%</span><span>38.0%</span></div>
+          </div>
+
+          <!-- 生師比 (PTRATIO) -->
+          <div class="space-y-1">
+            <div class="flex justify-between">
+              <span class="font-medium text-slate-300">城鎮學區生師比 (PTRATIO) <span class="text-blue-400 font-semibold">*學區品質指標 (-1.00k / 生)</span></span>
+              <span id="val_ptratio" class="font-bold text-blue-400 text-sm">18.5 : 1</span>
+            </div>
+            <input id="slider_ptratio" type="range" min="12.5" max="22.5" step="0.5" value="18.5" oninput="calculatePrediction()" class="w-full accent-blue-500">
+            <div class="flex justify-between text-[10px] text-slate-500"><span>12.5 (優良)</span><span>17.5</span><span>22.5 (擁擠)</span></div>
+          </div>
+
+          <!-- 就業中心距離 (DIS) -->
+          <div class="space-y-1">
+            <div class="flex justify-between">
+              <span class="font-medium text-slate-300">就業中心加權距離 (DIS) <span class="text-indigo-400 font-medium">(-1.22k / 單位)</span></span>
+              <span id="val_dis" class="font-bold text-indigo-400 text-sm">3.8</span>
+            </div>
+            <input id="slider_dis" type="range" min="1.1" max="11.5" step="0.1" value="3.8" oninput="calculatePrediction()" class="w-full accent-indigo-500">
+            <div class="flex justify-between text-[10px] text-slate-500"><span>1.1 (市區)</span><span>5.0</span><span>11.5 (遠郊)</span></div>
+          </div>
+
+          <!-- 空氣污染濃度 (NOX) -->
+          <div class="space-y-1">
+            <div class="flex justify-between">
+              <span class="font-medium text-slate-300">空氣一氧化氮濃度 (NOX) <span class="text-amber-400 font-medium">環境污染 (-16.26k / ppm)</span></span>
+              <span id="val_nox" class="font-bold text-amber-400 text-sm">0.55 ppm</span>
+            </div>
+            <input id="slider_nox" type="range" min="0.38" max="0.87" step="0.01" value="0.55" oninput="calculatePrediction()" class="w-full accent-amber-500">
+            <div class="flex justify-between text-[10px] text-slate-500"><span>0.38 (清新)</span><span>0.60</span><span>0.87 (高污染)</span></div>
+          </div>
+
+          <!-- 物業稅率 (TAX) -->
+          <div class="space-y-1">
+            <div class="flex justify-between">
+              <span class="font-medium text-slate-300">物業稅率 (TAX, 每萬美元)</span>
+              <span id="val_tax" class="font-bold text-slate-300 text-sm">$330</span>
+            </div>
+            <input id="slider_tax" type="range" min="180" max="711" step="10" value="330" oninput="calculatePrediction()" class="w-full accent-slate-500">
+            <div class="flex justify-between text-[10px] text-slate-500"><span>$180</span><span>$450</span><span>$711</span></div>
+          </div>
+        </div>
       </div>
 
-      <!-- 右側：即時預測利潤對照 (5 cols) -->
+      <!-- 右側：即時預測輸出對照 (5 cols) -->
       <div class="lg:col-span-5 bg-gradient-to-br from-slate-800/80 to-slate-900/90 border border-slate-700/60 rounded-xl p-5 flex flex-col justify-between space-y-4">
         <div>
-          <h3 class="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-3">雙模型即時利潤預測對比</h3>
+          <h3 id="predComparisonTitle" class="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-3">雙模型即時推論對比</h3>
 
-          <!-- 最佳黃金模型預測 (k=2) -->
+          <!-- 最佳黃金模型預測 -->
           <div class="bg-blue-950/40 border border-blue-500/40 rounded-xl p-4 mb-3 relative overflow-hidden">
             <div class="flex justify-between items-center mb-1">
               <span class="text-xs font-semibold text-blue-300 flex items-center gap-1.5">
                 <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                最佳黃金模型預測 (k=2)
+                <span id="predGoldenTitle">最佳黃金模型預測 (k=2)</span>
               </span>
               <span class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded">推薦部署</span>
             </div>
             <div class="text-3xl font-extrabold text-white tracking-tight" id="pred_golden">$0</div>
             <div class="text-[11px] text-slate-400 mt-1 flex justify-between">
-              <span>使用變數: 研發 + 行銷</span>
-              <span class="text-blue-300">RMSE: $8,198.80</span>
+              <span id="predGoldenFeatures">使用變數: 研發 + 行銷</span>
+              <span id="predGoldenRmse" class="text-blue-300">RMSE: $8,198.80</span>
             </div>
           </div>
 
-          <!-- 全特徵基準模型預測 (k=5) -->
+          <!-- 全特徵基準模型預測 -->
           <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 text-xs">
             <div class="flex justify-between text-slate-400 mb-1">
-              <span>全特徵基準模型預測 (k=5):</span>
-              <span class="text-slate-300">RMSE: $9,137.99</span>
+              <span id="predBaseTitle">全特徵基準模型預測 (k=5):</span>
+              <span id="predBaseRmse" class="text-slate-300">RMSE: $9,137.99</span>
             </div>
             <div class="text-lg font-bold text-slate-300" id="pred_baseline">$0</div>
-            <div class="text-[11px] text-slate-500 mt-0.5">兩模型預測差額: <span id="pred_diff" class="text-slate-400 font-medium">$0</span></div>
+            <div class="text-[11px] text-slate-500 mt-0.5">兩模型預測差額: <span id="pred_diff" class="text-slate-400 font-medium font-mono">$0</span></div>
           </div>
         </div>
 
-        <!-- 商業決策建議提示 -->
-        <div class="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-xs text-amber-200/90 space-y-1">
+        <!-- 商業/實證決策建議提示 -->
+        <div id="insightBox" class="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-xs text-amber-200/90 space-y-1">
           <div class="font-bold flex items-center gap-1.5 text-amber-300">
-            <span>💡 創投決策洞察</span>
+            <span>💡 決策與特徵意涵洞察</span>
           </div>
-          <p class="text-[11px] leading-relaxed text-slate-300">
+          <p id="insightText" class="text-[11px] leading-relaxed text-slate-300">
             研發預算每增加 <span class="text-emerald-400 font-semibold">$1.00</span>，預期可為新創獲利帶來約 <span class="text-emerald-400 font-semibold">$0.80～$0.86</span> 的直接增益；反之行政開銷過高可能產生負邊際效益。
           </p>
         </div>
       </div>
     </section>
 
-    <!-- 底部：CRISP-DM 6 大階段總結 -->
+    <!-- 底部：CRISP-DM 6 大階段總結 (動態自適應切換) -->
     <section class="bg-slate-800/40 border border-slate-700/50 rounded-xl p-5 text-xs text-slate-300 space-y-3">
-      <h3 class="font-bold text-white text-sm">CRISP-DM 專案實踐總結</h3>
+      <div class="flex justify-between items-center">
+        <h3 class="font-bold text-white text-sm flex items-center gap-2">
+          <span>📋 CRISP-DM 專案實踐總結</span>
+          <span id="crispDatasetBadge" class="text-[11px] bg-slate-700 text-slate-300 px-2 py-0.5 rounded font-normal">50 Startups</span>
+        </h3>
+        <span class="text-slate-500 text-[11px]">持久化檔: <code id="pipelineFileCode" class="text-amber-400">50_startups_pipeline.joblib</code></span>
+      </div>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-[11px] text-slate-400">
         <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-800">
           <span class="text-blue-400 font-semibold block mb-1">1~2. 商業與資料理解</span>
-          透過 50 家新創收支分析，確立獲利預測目標。確認無缺失值，並發現研發支出與獲利呈現高達 0.9729 的極強相關性。
+          <span id="crisp_p12">透過 50 家新創收支分析確立利潤預測目標。無缺失值，研發支出與獲利呈現高達 0.9729 的極強相關性。</span>
         </div>
         <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-800">
           <span class="text-blue-400 font-semibold block mb-1">3~4. 特徵選擇與建模</span>
-          嚴格測試 5 大特徵選擇演算法，一致驗證 k=2 為全域最佳甜點區（Sweet Spot），將前處理與 SFS 封裝入 Scikit-Learn Pipeline。
+          <span id="crisp_p34">實測 5 大特徵選擇演算法，一致驗證 k=2 為全域最佳甜點區，將前處理與 SFS 封裝入 Pipeline。</span>
         </div>
         <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-800">
           <span class="text-blue-400 font-semibold block mb-1">5~6. 評估與生產部署</span>
-          特徵篩選後測試集 RMSE 降至 $8,198.80，R² 升至 0.9474。已持久化為 <code class="text-amber-300">50_startups_pipeline.joblib</code>，支援線上自動化推論。
+          <span id="crisp_p56">篩選後 RMSE 降至 $8,198.80，R² 升至 0.9474。已持久化為 50_startups_pipeline.joblib。</span>
         </div>
       </div>
     </section>
@@ -291,90 +375,120 @@
   </main>
 
   <footer class="border-t border-slate-800 py-4 text-center text-xs text-slate-500">
-    50 Startups Multiple Linear Regression & Feature Selection Project • CRISP-DM Workflow • Powered by Scikit-Learn & Tailwind CSS
+    多元線性迴歸與特徵選擇雙資料集互動儀表板 (50 Startups & Boston Housing) • CRISP-DM Workflow • Powered by Scikit-Learn & Chart.js
   </footer>
 
-  <!-- 數據與圖表控制邏輯 -->
+  <!-- 數據與前端交互邏輯 -->
   <script>
-    // 實驗數據字典
-    const experimentData = {
-      user_ref: {
-        name: "使用者參考基準 (User Reference)",
-        rmse: [8274.868, 8198.797, 8309.060, 8409.917, 9137.990],
-        r2: [0.946459, 0.947439, 0.946015, 0.944697, 0.934707],
-        features: [
-          "['R&D Spend']",
-          "['R&D Spend', 'Marketing Spend']",
-          "['R&D Spend', 'Marketing Spend', 'State_New York']",
-          "['R&D Spend', 'Marketing Spend', 'State_New York', 'State_Florida']",
-          "['R&D Spend', 'Marketing Spend', 'Administration', 'State_FL', 'State_NY']"
-        ]
-      },
-      skb: {
-        name: "1. Filter: SelectKBest (F-test)",
-        rmse: [8274.868, 8198.797, 8803.776, 8997.199, 9137.990],
-        r2: [0.946459, 0.947439, 0.939396, 0.936703, 0.934707],
-        features: [
-          "['R&D Spend']",
-          "['R&D Spend', 'Marketing Spend']",
-          "['R&D Spend', 'Marketing Spend', 'Administration']",
-          "['R&D Spend', 'Marketing Spend', 'Administration', 'State_New York']",
-          "['R&D Spend', 'Marketing Spend', 'Administration', 'State_NY', 'State_FL']"
-        ]
-      },
-      sfs: {
-        name: "2. Wrapper: SFS (Forward 逐步選擇)",
-        rmse: [8274.868, 8198.797, 8803.776, 8997.199, 9137.990],
-        r2: [0.946459, 0.947439, 0.939396, 0.936703, 0.934707],
-        features: [
-          "['R&D Spend']",
-          "['R&D Spend', 'Marketing Spend']",
-          "['R&D Spend', 'Administration', 'Marketing Spend']",
-          "['R&D Spend', 'Administration', 'Marketing Spend', 'State_New York']",
-          "['R&D Spend', 'Administration', 'Marketing Spend', 'State_FL', 'State_NY']"
-        ]
-      },
-      rfe: {
-        name: "3. Wrapper: RFE (遞迴消除法)",
-        rmse: [8274.868, 8198.797, 8803.776, 9068.541, 9137.990],
-        r2: [0.946459, 0.947439, 0.939396, 0.935696, 0.934707],
-        features: [
-          "['R&D Spend']",
-          "['R&D Spend', 'Marketing Spend']",
-          "['R&D Spend', 'Marketing Spend', 'Administration']",
-          "['R&D Spend', 'Marketing Spend', 'Administration', 'State_Florida']",
-          "['R&D Spend', 'Marketing Spend', 'Administration', 'State_FL', 'State_NY']"
-        ]
-      },
-      lasso: {
-        name: "4. Embedded: Lasso (L1 正則化)",
-        rmse: [8274.868, 8198.797, 8803.776, 8997.199, 9137.990],
-        r2: [0.946459, 0.947439, 0.939396, 0.936703, 0.934707],
-        features: [
-          "['R&D Spend']",
-          "['R&D Spend', 'Marketing Spend']",
-          "['R&D Spend', 'Marketing Spend', 'Administration']",
-          "['R&D Spend', 'Marketing Spend', 'Administration', 'State_New York']",
-          "['R&D Spend', 'Marketing Spend', 'Administration', 'State_NY', 'State_FL']"
-        ]
-      },
-      rf: {
-        name: "5. Embedded: Random Forest (樹重要度)",
-        rmse: [8274.868, 8198.797, 8803.776, 9068.541, 9137.990],
-        r2: [0.946459, 0.947439, 0.939396, 0.935696, 0.934707],
-        features: [
-          "['R&D Spend']",
-          "['R&D Spend', 'Marketing Spend']",
-          "['R&D Spend', 'Marketing Spend', 'Administration']",
-          "['R&D Spend', 'Marketing Spend', 'Administration', 'State_Florida']",
-          "['R&D Spend', 'Marketing Spend', 'Administration', 'State_FL', 'State_NY']"
-        ]
-      }
-    };
-
+    // 預設資料庫備份（當 model_data.js 未能外部載入時作為 Fallback）
+    let currentDatasetKey = 'startups';
     let selectedState = 'California';
     let rmseChartInstance = null;
     let r2ChartInstance = null;
+
+    // 確保 MODEL_DATA 存在
+    const DATA = (typeof MODEL_DATA !== 'undefined') ? MODEL_DATA : {
+      startups: {
+        title: "50 Startups 獲利預測與特徵選擇分析",
+        subtitle: "Multiple Linear Regression & Feature Selection (k=1..5) Diagnostic Studio",
+        badge: "50",
+        badgeColor: "from-blue-600 to-indigo-500",
+        kRange: [1, 2, 3, 4, 5],
+        sweetSpotK: 2,
+        kpi: {
+          maxR2: "0.9474", maxR2Diff: "+0.0127 vs 全特徵",
+          minRmse: "$8,198.80", minRmseDiff: "-$939.19",
+          goldenFeatures: "R&D + Marketing", goldenDesc: "研發支出與行銷支出雙引擎",
+          sparsity: "60%", sparsityDesc: "5 特徵 → 2 特徵 (排除雜訊)"
+        },
+        algorithms: {
+          forward_sfs: { name: "1. Forward SFS", rmse: [8274.87, 8198.80, 8803.78, 8997.20, 9137.99], r2: [0.946459, 0.947439, 0.939396, 0.936703, 0.934707], features: ["R&D Spend", "R&D Spend, Marketing Spend", "R&D Spend, Administration, Marketing Spend", "R&D Spend, Administration, Marketing Spend, State_New York", "R&D Spend, Administration, Marketing Spend, State_Florida, State_New York"] },
+          rfe: { name: "2. RFE", rmse: [8274.87, 8198.80, 8803.78, 9068.54, 9137.99], r2: [0.946459, 0.947439, 0.939396, 0.935696, 0.934707], features: ["R&D Spend", "R&D Spend, Marketing Spend", "R&D Spend, Marketing Spend, Administration", "R&D Spend, Marketing Spend, Administration, State_Florida", "R&D Spend, Marketing Spend, Administration, State_Florida, State_New York"] },
+          lasso_l1_ranking: { name: "3. Lasso L1", rmse: [8274.87, 8198.80, 8309.06, 8409.92, 9137.99], r2: [0.946459, 0.947439, 0.946015, 0.944697, 0.934707], features: ["R&D Spend", "R&D Spend, Marketing Spend", "R&D Spend, Marketing Spend, State_New York", "R&D Spend, Marketing Spend, State_New York, State_Florida", "R&D Spend, Marketing Spend, Administration, State_Florida, State_New York"] },
+          elasticnet_ranking: { name: "4. ElasticNet", rmse: [8274.87, 8198.80, 8803.78, 8997.20, 9137.99], r2: [0.946459, 0.947439, 0.939396, 0.936703, 0.934707], features: ["R&D Spend", "R&D Spend, Marketing Spend", "R&D Spend, Marketing Spend, Administration", "R&D Spend, Marketing Spend, Administration, State_New York", "R&D Spend, Marketing Spend, Administration, State_Florida, State_New York"] },
+          exhaustive_search: { name: "5. Exhaustive Search", rmse: [8274.87, 8198.80, 8309.06, 8409.92, 9137.99], r2: [0.946459, 0.947439, 0.946015, 0.944697, 0.934707], features: ["R&D Spend", "R&D Spend, Marketing Spend", "R&D Spend, Marketing Spend, State_New York", "R&D Spend, Marketing Spend, State_New York, State_Florida", "R&D Spend, Marketing Spend, Administration, State_Florida, State_New York"] }
+        },
+        simulator: {
+          type: 'startups',
+          goldenModel: { title: "最佳黃金模型 (k=2)", rmse: "$8,198.80" },
+          baselineModel: { title: "全特徵基準模型 (k=5)", rmse: "$9,137.99" }
+        },
+        crispSummary: {
+          phase12: "透過 50 家新創收支分析確立利潤預測目標。無缺失值，研發支出與獲利呈現高達 0.9729 的極強相關性。",
+          phase34: "實測 5 大特徵選擇演算法，一致驗證 k=2 為全域最佳甜點區，將前處理與 SFS 封裝入 Pipeline。",
+          phase56: "篩選後 RMSE 降至 $8,198.80，R² 升至 0.9474。已持久化為 50_startups_pipeline.joblib。"
+        }
+      }
+    };
+
+    // 切換資料集主邏輯
+    function switchDataset(datasetKey) {
+      currentDatasetKey = datasetKey;
+      const ds = DATA[datasetKey];
+      if (!ds) return;
+
+      // 1. 更新 Header 標題與 Badge
+      const badge = document.getElementById('datasetBadge');
+      badge.innerText = ds.badge;
+      badge.className = `w-10 h-10 rounded-xl bg-gradient-to-tr ${ds.badgeColor} flex items-center justify-center font-extrabold text-white shadow-lg text-sm transition-all duration-300`;
+
+      document.getElementById('datasetSubtitle').innerText = ds.subtitle;
+      document.getElementById('datasetSourceTag').innerText = datasetKey === 'startups' ? '50_Startups.csv' : 'BostonHousing.csv';
+      document.getElementById('chartKRangeTitle').innerText = datasetKey === 'startups' ? 'k=1..5' : 'k=1..13';
+
+      // 2. 更新 KPI 卡片
+      document.getElementById('kpi_max_r2').innerText = ds.kpi.maxR2;
+      document.getElementById('kpi_max_r2_diff').innerText = ds.kpi.maxR2Diff;
+      document.getElementById('kpi_min_rmse').innerText = ds.kpi.minRmse;
+      document.getElementById('kpi_min_rmse_diff').innerText = ds.kpi.minRmseDiff;
+      document.getElementById('kpi_golden_features').innerText = ds.kpi.goldenFeatures;
+      document.getElementById('kpi_golden_desc').innerText = ds.kpi.goldenDesc;
+      document.getElementById('kpi_sparsity').innerText = ds.kpi.sparsity;
+      document.getElementById('kpi_sparsity_tag').innerText = ds.kpi.sparsityDesc;
+
+      document.getElementById('kpi_sweet_k_desc').innerText = `出現在特徵數 k=${ds.sweetSpotK} (Sweet Spot)`;
+      document.getElementById('sweetSpotPill').innerText = `甜點區：特徵數 = ${ds.sweetSpotK}`;
+      document.getElementById('chartRmseBadge').innerText = `谷底: k=${ds.sweetSpotK} (${ds.kpi.minRmse})`;
+      document.getElementById('chartR2Badge').innerText = `高峰: k=${ds.sweetSpotK} (${ds.kpi.maxR2})`;
+
+      // 3. 切換推論模擬器面板
+      if (datasetKey === 'startups') {
+        document.getElementById('sim_panel_startups').classList.remove('hidden');
+        document.getElementById('sim_panel_boston').classList.add('hidden');
+        document.getElementById('simulatorTitle').innerText = "🏢 互動式新創獲利推論模擬器";
+        document.getElementById('simulatorDesc').innerText = "調整資金配置，即時觀察全特徵模型 vs 最佳精簡模型 (k=2) 的利潤預測表現";
+        document.getElementById('predGoldenTitle').innerText = "最佳黃金模型預測 (k=2)";
+        document.getElementById('predGoldenFeatures').innerText = "使用變數: 研發 + 行銷";
+        document.getElementById('predGoldenRmse').innerText = "RMSE: $8,198.80";
+        document.getElementById('predBaseTitle').innerText = "全特徵基準模型預測 (k=5):";
+        document.getElementById('predBaseRmse').innerText = "RMSE: $9,137.99";
+        document.getElementById('insightText').innerHTML = '研發預算每增加 <span class="text-emerald-400 font-semibold">$1.00</span>，預期可為新創獲利帶來約 <span class="text-emerald-400 font-semibold">$0.80～$0.86</span> 的直接增益；反之行政開銷過高可能產生負邊際效益。';
+        document.getElementById('pipelineFileCode').innerText = "50_startups_pipeline.joblib";
+        document.getElementById('crispDatasetBadge').innerText = "50 Startups";
+      } else {
+        document.getElementById('sim_panel_startups').classList.add('hidden');
+        document.getElementById('sim_panel_boston').classList.remove('hidden');
+        document.getElementById('simulatorTitle').innerText = "🏡 互動式波士頓房價推論模擬器";
+        document.getElementById('simulatorDesc').innerText = "調整房產與環境參數，即時估算房價中位數 (MEDV) 及全特徵基準對比";
+        document.getElementById('predGoldenTitle').innerText = "最佳黃金模型預測 (k=7)";
+        document.getElementById('predGoldenFeatures').innerText = "選取: RM, LSTAT, PTRATIO, DIS, NOX, TAX, RAD";
+        document.getElementById('predGoldenRmse').innerText = "RMSE: $4,899.54";
+        document.getElementById('predBaseTitle').innerText = "全特徵基準模型預測 (k=13):";
+        document.getElementById('predBaseRmse').innerText = "RMSE: $4,928.60";
+        document.getElementById('insightText').innerHTML = '房間數每增加 <span class="text-emerald-400 font-semibold">1 間</span>，預期帶動房價增長約 <span class="text-emerald-400 font-semibold">+$4,380</span>；低社經族群比例 (LSTAT) 每提高 <span class="text-rose-400 font-semibold">1%</span> 則壓抑房價約 <span class="text-rose-400 font-semibold">-$580</span>。';
+        document.getElementById('pipelineFileCode').innerText = "boston_housing_pipeline.joblib";
+        document.getElementById('crispDatasetBadge').innerText = "Boston Housing";
+      }
+
+      // 4. 更新 CRISP-DM 總結區塊
+      document.getElementById('crisp_p12').innerText = ds.crispSummary.phase12;
+      document.getElementById('crisp_p34').innerText = ds.crispSummary.phase34;
+      document.getElementById('crisp_p56').innerText = ds.crispSummary.phase56;
+
+      // 5. 更新圖表與明細表
+      updateCharts();
+      calculatePrediction();
+    }
 
     // 初始化 Chart.js
     function initCharts() {
@@ -388,7 +502,7 @@
           legend: { labels: { color: '#cbd5e1', font: { size: 11 } } },
           tooltip: {
             callbacks: {
-              label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString(undefined, {minimumFractionDigits: isMin ? 2 : 6})}`
+              label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString(undefined, {minimumFractionDigits: isMin ? 2 : 4})}`
             }
           }
         },
@@ -418,51 +532,57 @@
         options: chartOptions('R-squared', false)
       });
 
-      updateCharts();
+      switchDataset('startups');
     }
 
-    // 更新圖表與表格
+    // 更新圖表與明細表格
     function updateCharts() {
+      const ds = DATA[currentDatasetKey];
+      if (!ds) return;
+
       const mode = document.getElementById('methodSelect').value;
-      const kLabels = [1, 2, 3, 4, 5];
+      const kLabels = ds.kRange;
+
+      rmseChartInstance.data.labels = kLabels;
+      r2ChartInstance.data.labels = kLabels;
 
       if (mode === 'all_compare') {
-        // 同步疊加比對
         const colors = {
-          user_ref: '#3b82f6',
-          skb: '#f97316',
-          sfs: '#10b981',
+          forward_sfs: '#10b981',
           rfe: '#ef4444',
-          lasso: '#a855f7',
-          rf: '#ec4899'
+          lasso_l1_ranking: '#a855f7',
+          elasticnet_ranking: '#f97316',
+          exhaustive_search: '#3b82f6'
         };
 
-        rmseChartInstance.data.datasets = Object.keys(experimentData).map(key => ({
-          label: experimentData[key].name,
-          data: experimentData[key].rmse,
-          borderColor: colors[key],
-          backgroundColor: colors[key],
-          borderWidth: key === 'user_ref' ? 3 : 1.5,
-          borderDash: key === 'user_ref' ? [] : [4, 4],
+        rmseChartInstance.data.datasets = Object.keys(ds.algorithms).map(key => ({
+          label: ds.algorithms[key].name,
+          data: ds.algorithms[key].rmse,
+          borderColor: colors[key] || '#94a3b8',
+          backgroundColor: colors[key] || '#94a3b8',
+          borderWidth: (key === 'forward_sfs' || key === 'exhaustive_search') ? 2.5 : 1.8,
+          borderDash: key === 'elasticnet_ranking' ? [4, 4] : [],
           pointRadius: 4,
           tension: 0.1
         }));
 
-        r2ChartInstance.data.datasets = Object.keys(experimentData).map(key => ({
-          label: experimentData[key].name,
-          data: experimentData[key].r2,
-          borderColor: colors[key],
-          backgroundColor: colors[key],
-          borderWidth: key === 'user_ref' ? 3 : 1.5,
-          borderDash: key === 'user_ref' ? [] : [4, 4],
+        r2ChartInstance.data.datasets = Object.keys(ds.algorithms).map(key => ({
+          label: ds.algorithms[key].name,
+          data: ds.algorithms[key].r2,
+          borderColor: colors[key] || '#94a3b8',
+          backgroundColor: colors[key] || '#94a3b8',
+          borderWidth: (key === 'forward_sfs' || key === 'exhaustive_search') ? 2.5 : 1.8,
+          borderDash: key === 'elasticnet_ranking' ? [4, 4] : [],
           pointRadius: 4,
           tension: 0.1
         }));
 
-        renderTable('user_ref');
-        document.getElementById('detailPanelTitle').innerText = "各方法特徵選擇全覽 (基準展示：使用者參考組合)";
+        renderTable('forward_sfs');
+        document.getElementById('detailPanelTitle').innerText = `${ds.title} — 各演算法全覽 (明細展示: Forward SFS)`;
       } else {
-        const item = experimentData[mode];
+        const item = ds.algorithms[mode] || ds.algorithms['forward_sfs'];
+        const sweetIdx = ds.sweetSpotK - 1;
+
         rmseChartInstance.data.datasets = [{
           label: item.name + ' (RMSE)',
           data: item.rmse,
@@ -470,7 +590,7 @@
           backgroundColor: '#3b82f6',
           borderWidth: 2.5,
           pointRadius: 5,
-          pointBackgroundColor: item.rmse.map((v, i) => i === 1 ? '#10b981' : '#3b82f6'),
+          pointBackgroundColor: item.rmse.map((v, i) => i === sweetIdx ? '#10b981' : '#3b82f6'),
           tension: 0.1
         }];
 
@@ -481,7 +601,7 @@
           backgroundColor: '#10b981',
           borderWidth: 2.5,
           pointRadius: 5,
-          pointBackgroundColor: item.r2.map((v, i) => i === 1 ? '#f59e0b' : '#10b981'),
+          pointBackgroundColor: item.r2.map((v, i) => i === sweetIdx ? '#f59e0b' : '#10b981'),
           tension: 0.1
         }];
 
@@ -493,22 +613,27 @@
       r2ChartInstance.update();
     }
 
-    // 渲染明細表格
-    function renderTable(key) {
-      const item = experimentData[key];
+    // 渲染特徵選擇明細表格
+    function renderTable(algoKey) {
+      const ds = DATA[currentDatasetKey];
+      if (!ds) return;
+      const item = ds.algorithms[algoKey] || ds.algorithms['forward_sfs'];
       const tbody = document.getElementById('detailTableBody');
       tbody.innerHTML = '';
 
-      for (let i = 0; i < 5; i++) {
-        const isSweet = (i === 1);
+      const sweetIdx = ds.sweetSpotK - 1;
+
+      for (let i = 0; i < ds.kRange.length; i++) {
+        const k = ds.kRange[i];
+        const isSweet = (i === sweetIdx);
         const tr = document.createElement('tr');
-        tr.className = isSweet ? "bg-blue-900/30 font-semibold text-white border-l-2 border-blue-400" : "hover:bg-slate-800/50";
+        tr.className = isSweet ? "bg-blue-900/40 font-semibold text-white border-l-4 border-emerald-400" : "hover:bg-slate-800/50";
         tr.innerHTML = `
           <td class="py-2.5 px-3 flex items-center gap-1.5">
-            ${i + 1}
-            ${isSweet ? '<span class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1 py-0.2 rounded font-normal">最佳</span>' : ''}
+            ${k}
+            ${isSweet ? '<span class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.2 rounded font-normal">最佳甜點</span>' : ''}
           </td>
-          <td class="py-2.5 px-3 font-mono text-[11px] text-slate-300">${item.features[i]}</td>
+          <td class="py-2.5 px-3 font-mono text-[11px] text-slate-300">${item.features[i] || ''}</td>
           <td class="py-2.5 px-3 text-right font-mono ${isSweet ? 'text-emerald-400 font-bold' : ''}">$${item.rmse[i].toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
           <td class="py-2.5 px-3 text-right font-mono ${isSweet ? 'text-blue-400 font-bold' : ''}">${item.r2[i].toFixed(6)}</td>
         `;
@@ -516,7 +641,7 @@
       }
     }
 
-    // 狀態切換
+    // 州別切換 (50 Startups)
     function setState(state) {
       selectedState = state;
       ['ca', 'ny', 'fl'].forEach(id => {
@@ -528,45 +653,89 @@
       calculatePrediction();
     }
 
-    // 即時利潤推論計算
+    // 即時預測計算器 (支援 50 Startups 與 Boston Housing)
     function calculatePrediction() {
-      const rd = parseFloat(document.getElementById('slider_rd').value);
-      const mkt = parseFloat(document.getElementById('slider_mkt').value);
-      const adm = parseFloat(document.getElementById('slider_adm').value);
+      if (currentDatasetKey === 'startups') {
+        const rd = parseFloat(document.getElementById('slider_rd').value);
+        const mkt = parseFloat(document.getElementById('slider_mkt').value);
+        const adm = parseFloat(document.getElementById('slider_adm').value);
 
-      document.getElementById('val_rd').innerText = `$${rd.toLocaleString()}`;
-      document.getElementById('val_mkt').innerText = `$${mkt.toLocaleString()}`;
-      document.getElementById('val_adm').innerText = `$${adm.toLocaleString()}`;
+        document.getElementById('val_rd').innerText = `$${rd.toLocaleString()}`;
+        document.getElementById('val_mkt').innerText = `$${mkt.toLocaleString()}`;
+        document.getElementById('val_adm').innerText = `$${adm.toLocaleString()}`;
 
-      // 1. 最佳黃金模型 (k=2: R&D + Marketing)
-      // Equation: Profit = 47812.38 + 0.7966 * RD + 0.0299 * MKT
-      const predGolden = 47812.38 + (0.7966 * rd) + (0.0299 * mkt);
+        // 1. 最佳黃金模型 (k=2: R&D + Marketing)
+        const predGolden = 47812.38 + (0.7966 * rd) + (0.0299 * mkt);
 
-      // 2. 全特徵基準模型 (k=5: RD, Admin, MKT, FL, NY)
-      // Intercept: 54028.04, Admin: -0.0688, State_FL: 938.79, State_NY: 6.99
-      let stateFL = (selectedState === 'Florida') ? 1.0 : 0.0;
-      let stateNY = (selectedState === 'New York') ? 1.0 : 0.0;
-      const predBase = 54028.04 + (0.8056 * rd) - (0.0688 * adm) + (0.0299 * mkt) + (938.79 * stateFL) + (6.99 * stateNY);
+        // 2. 全特徵基準模型 (k=5: RD, Admin, MKT, FL, NY)
+        let stateFL = (selectedState === 'Florida') ? 1.0 : 0.0;
+        let stateNY = (selectedState === 'New York') ? 1.0 : 0.0;
+        const predBase = 54028.04 + (0.8056 * rd) - (0.0688 * adm) + (0.0299 * mkt) + (938.79 * stateFL) + (6.99 * stateNY);
 
-      document.getElementById('pred_golden').innerText = `$${predGolden.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-      document.getElementById('pred_baseline').innerText = `$${predBase.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        document.getElementById('pred_golden').innerText = `$${predGolden.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        document.getElementById('pred_baseline').innerText = `$${predBase.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
 
-      const diff = predGolden - predBase;
-      const diffSign = diff >= 0 ? "+$" : "-$";
-      document.getElementById('pred_diff').innerText = `${diffSign}${Math.abs(diff).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        const diff = predGolden - predBase;
+        const diffSign = diff >= 0 ? "+$" : "-$";
+        document.getElementById('pred_diff').innerText = `${diffSign}${Math.abs(diff).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+      } else {
+        // Boston Housing
+        const rm = parseFloat(document.getElementById('slider_rm').value);
+        const lstat = parseFloat(document.getElementById('slider_lstat').value);
+        const ptratio = parseFloat(document.getElementById('slider_ptratio').value);
+        const dis = parseFloat(document.getElementById('slider_dis').value);
+        const nox = parseFloat(document.getElementById('slider_nox').value);
+        const tax = parseFloat(document.getElementById('slider_tax').value);
+
+        document.getElementById('val_rm').innerText = `${rm.toFixed(1)} 間`;
+        document.getElementById('val_lstat').innerText = `${lstat.toFixed(1)}%`;
+        document.getElementById('val_ptratio').innerText = `${ptratio.toFixed(1)} : 1`;
+        document.getElementById('val_dis').innerText = `${dis.toFixed(1)}`;
+        document.getElementById('val_nox').innerText = `${nox.toFixed(2)} ppm`;
+        document.getElementById('val_tax').innerText = `$${tax.toFixed(0)}`;
+
+        // 1. 最佳黃金模型 (k=7: lstat, rm, ptratio, dis, nox, tax, rad)
+        // Intercept: 36.80, lstat: -0.5802, rm: 4.3786, ptratio: -0.9981, dis: -1.2229, nox: -16.2629, tax: -0.00977, rad: 0.1614 (設 rad=4)
+        const rad = 4.0;
+        const predGoldenK = 36.7992 - (0.5802 * lstat) + (4.3786 * rm) - (0.9981 * ptratio) - (1.2229 * dis) - (16.2629 * nox) - (0.00977 * tax) + (0.1614 * rad);
+        const predGoldenUSD = Math.max(1000, predGoldenK * 1000.0);
+
+        // 2. 全特徵基準模型 (k=13)
+        // Intercept: 30.25, crim: -0.113, zn: 0.030, indus: 0.040, chas: 2.78(0), nox: -17.20, rm: 4.44, age: -0.0063(65), dis: -1.45, rad: 0.262, tax: -0.0106, ptratio: -0.915, b: 0.0124(390), lstat: -0.509
+        const crim = 0.25, zn = 0.0, indus = 8.0, chas = 0, age = 65.0, b = 390.0;
+        const predBaseK = 30.2468 - (0.1131 * crim) + (0.0301 * zn) + (0.0404 * indus) + (2.7844 * chas) - (17.2026 * nox) + (4.4388 * rm) - (0.0063 * age) - (1.4479 * dis) + (0.2624 * rad) - (0.0106 * tax) - (0.9155 * ptratio) + (0.0124 * b) - (0.5086 * lstat);
+        const predBaseUSD = Math.max(1000, predBaseK * 1000.0);
+
+        document.getElementById('pred_golden').innerText = `$${predGoldenUSD.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} ($${(predGoldenUSD/1000).toFixed(2)}k)`;
+        document.getElementById('pred_baseline').innerText = `$${predBaseUSD.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} ($${(predBaseUSD/1000).toFixed(2)}k)`;
+
+        const diff = predGoldenUSD - predBaseUSD;
+        const diffSign = diff >= 0 ? "+$" : "-$";
+        document.getElementById('pred_diff').innerText = `${diffSign}${Math.abs(diff).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+      }
     }
 
+    // 重設輸入數值
     function resetInputs() {
-      document.getElementById('slider_rd').value = 120000;
-      document.getElementById('slider_mkt').value = 250000;
-      document.getElementById('slider_adm').value = 100000;
-      setState('California');
+      if (currentDatasetKey === 'startups') {
+        document.getElementById('slider_rd').value = 120000;
+        document.getElementById('slider_mkt').value = 250000;
+        document.getElementById('slider_adm').value = 100000;
+        setState('California');
+      } else {
+        document.getElementById('slider_rm').value = 6.2;
+        document.getElementById('slider_lstat').value = 12.5;
+        document.getElementById('slider_ptratio').value = 18.5;
+        document.getElementById('slider_dis').value = 3.8;
+        document.getElementById('slider_nox').value = 0.55;
+        document.getElementById('slider_tax').value = 330;
+        calculatePrediction();
+      }
     }
 
-    // 啟動加載
+    // 頁面加載完成時初始化
     window.onload = function() {
       initCharts();
-      calculatePrediction();
     };
   </script>
 </body>

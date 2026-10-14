@@ -1,0 +1,26 @@
+﻿Algorithm,k,Selected_Features,RMSE,MAE,R2
+Forward Sequential Feature Selection (SFS),1,R&D Spend,8274.86801822599,6772.453280477899,0.9464587607787219
+Forward Sequential Feature Selection (SFS),2,"R&D Spend, Marketing Spend",8198.797190788488,6886.594588246514,0.9474386447268488
+Forward Sequential Feature Selection (SFS),3,"R&D Spend, Administration, Marketing Spend",8803.775790469354,7320.4416148481305,0.9393955917820569
+Forward Sequential Feature Selection (SFS),4,"R&D Spend, Administration, Marketing Spend, State_New York",8997.199285980276,7474.740626347181,0.9367033175958575
+Forward Sequential Feature Selection (SFS),5,"R&D Spend, Administration, Marketing Spend, State_Florida, State_New York",9137.990152794957,7514.293659640612,0.9347068473282423
+Recursive Feature Elimination (RFE),1,R&D Spend,8274.86801822599,6772.453280477899,0.9464587607787219
+Recursive Feature Elimination (RFE),2,"R&D Spend, Marketing Spend",8198.797190788488,6886.594588246514,0.9474386447268488
+Recursive Feature Elimination (RFE),3,"R&D Spend, Marketing Spend, Administration",8803.775790469346,7320.441614848128,0.939395591782057
+Recursive Feature Elimination (RFE),4,"R&D Spend, Marketing Spend, Administration, State_Florida",9068.541184869362,7431.473270412908,0.9356955353592088
+Recursive Feature Elimination (RFE),5,"R&D Spend, Marketing Spend, Administration, State_Florida, State_New York",9137.990152794951,7514.293659640605,0.9347068473282424
+Lasso L1 Ranking,1,R&D Spend,8274.86801822599,6772.453280477899,0.9464587607787219
+Lasso L1 Ranking,2,"R&D Spend, Marketing Spend",8198.797190788488,6886.594588246514,0.9474386447268488
+Lasso L1 Ranking,3,"R&D Spend, Marketing Spend, State_New York",8309.05968348172,7028.435331818949,0.9460153830071389
+Lasso L1 Ranking,4,"R&D Spend, Marketing Spend, State_New York, State_Florida",8409.916714488054,7109.161997627586,0.9446968769428332
+Lasso L1 Ranking,5,"R&D Spend, Marketing Spend, State_New York, State_Florida, Administration",9137.99015279461,7514.293659639703,0.9347068473282473
+ElasticNet Ranking,1,R&D Spend,8274.86801822599,6772.453280477899,0.9464587607787219
+ElasticNet Ranking,2,"R&D Spend, Marketing Spend",8198.797190788488,6886.594588246514,0.9474386447268488
+ElasticNet Ranking,3,"R&D Spend, Marketing Spend, Administration",8803.775790469346,7320.441614848128,0.939395591782057
+ElasticNet Ranking,4,"R&D Spend, Marketing Spend, Administration, State_New York",8997.1992859803,7474.740626347195,0.9367033175958571
+ElasticNet Ranking,5,"R&D Spend, Marketing Spend, Administration, State_New York, State_Florida",9137.990152794955,7514.29365964061,0.9347068473282423
+Exhaustive Best Subset Search,1,R&D Spend,8274.86801822599,6772.453280477899,0.9464587607787219
+Exhaustive Best Subset Search,2,"R&D Spend, Marketing Spend",8198.797190788488,6886.594588246514,0.9474386447268488
+Exhaustive Best Subset Search,3,"R&D Spend, Administration, State_Florida",8171.645989404483,6730.785004118914,0.9477861934963947
+Exhaustive Best Subset Search,4,"R&D Spend, Administration, State_Florida, State_New York",8178.369214854913,6751.890336509609,0.9477002402858665
+Exhaustive Best Subset Search,5,"R&D Spend, Administration, Marketing Spend, State_Florida, State_New York",9137.990152794957,7514.293659640612,0.9347068473282423
