@@ -1,0 +1,9 @@
+# Ignore Python scripts and machine learning models during Vercel static build
+*.py
+*.joblib
+__pycache__/
+*.pyc
+requirements.txt
+.github/
+.vscode/
+.idea/
