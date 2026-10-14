@@ -13,6 +13,7 @@
 * 🌐 **GitHub Pages (Live Demo)**: [https://kouou24.github.io/DIC_Linear_regression/](https://kouou24.github.io/DIC_Linear_regression/)
 * 📦 **GitHub Repository**: [https://github.com/Kouou24/DIC_Linear_regression](https://github.com/Kouou24/DIC_Linear_regression)
 * ▲ **Vercel 部署支援**: 專案已配置 `vercel.json` 與 `.vercelignore`，可一鍵匯入 GitHub 儲存庫自動部署至 Vercel。
+<img width="1920" height="1705" alt="image" src="https://github.com/user-attachments/assets/d500711b-a3d2-40ff-bd55-fddf083204ec" />
 
 ---
 
