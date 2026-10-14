@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>50 Startups 多元線性迴歸與特徵選擇互動儀表板</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN with fallback -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .badge-glow { box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen antialiased flex flex-col">
+
+  <!-- 頂部導覽列 -->
+  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap justify-between items-center gap-3">
+      <div class="flex items-center space-x-3">
+        <div class="w-9 h-9 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center font-bold text-white shadow-md">
+          50
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+            50 Startups 獲利預測與特徵選擇分析
+            <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">CRISP-DM</span>
+          </h1>
+          <p class="text-xs text-slate-400">Multiple Linear Regression & Feature Selection (k=1..5) Diagnostic Studio</p>
+        </div>
+      </div>
+
+      <!-- CRISP-DM 導覽標籤 -->
+      <div class="hidden md:flex items-center gap-1 text-xs bg-slate-800/80 p-1 rounded-lg border border-slate-700/60">
+        <span class="px-2 py-1 rounded bg-slate-700/60 text-slate-300">1. Business</span>
+        <span class="text-slate-500">→</span>
+        <span class="px-2 py-1 rounded bg-slate-700/60 text-slate-300">2. Data</span>
+        <span class="text-slate-500">→</span>
+        <span class="px-2 py-1 rounded bg-blue-600/40 text-blue-300 font-semibold border border-blue-500/40">3. Selection</span>
+        <span class="text-slate-500">→</span>
+        <span class="px-2 py-1 rounded bg-slate-700/60 text-slate-300">4. Modeling</span>
+        <span class="text-slate-500">→</span>
+        <span class="px-2 py-1 rounded bg-slate-700/60 text-slate-300">5. Eval</span>
+        <span class="text-slate-500">→</span>
+        <span class="px-2 py-1 rounded bg-slate-700/60 text-slate-300">6. Deploy</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- 頂部核心指標卡片 (KPI Summary) -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 relative overflow-hidden">
+        <div class="text-xs text-slate-400 font-medium">最佳判定係數 (Max R²)</div>
+        <div class="text-2xl font-bold text-emerald-400 mt-1 flex items-baseline gap-2">
+          0.9474
+          <span class="text-xs font-medium text-emerald-300 bg-emerald-500/10 px-1.5 py-0.5 rounded">+0.0127 vs 全特徵</span>
+        </div>
+        <div class="text-xs text-slate-400 mt-1">出現在特徵數 k=2 (Sweet Spot)</div>
+        <div class="absolute -right-3 -bottom-3 w-16 h-16 bg-emerald-500/10 rounded-full blur-xl pointer-events-none"></div>
+      </div>
+
+      <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 relative overflow-hidden">
+        <div class="text-xs text-slate-400 font-medium">最低均方根誤差 (Min RMSE)</div>
+        <div class="text-2xl font-bold text-blue-400 mt-1 flex items-baseline gap-2">
+          $8,198.80
+          <span class="text-xs font-medium text-blue-300 bg-blue-500/10 px-1.5 py-0.5 rounded">-$939.19</span>
+        </div>
+        <div class="text-xs text-slate-400 mt-1">相較全特徵模型 ($9,137.99) 誤差大減</div>
+        <div class="absolute -right-3 -bottom-3 w-16 h-16 bg-blue-500/10 rounded-full blur-xl pointer-events-none"></div>
+      </div>
+
+      <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 relative overflow-hidden">
+        <div class="text-xs text-slate-400 font-medium">黃金特徵組合 (Golden Features)</div>
+        <div class="text-lg font-bold text-amber-300 mt-1 truncate">
+          R&D + Marketing
+        </div>
+        <div class="text-xs text-slate-400 mt-1">研發支出與行銷支出雙引擎</div>
+        <div class="absolute -right-3 -bottom-3 w-16 h-16 bg-amber-500/10 rounded-full blur-xl pointer-events-none"></div>
+      </div>
+
+      <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 relative overflow-hidden">
+        <div class="text-xs text-slate-400 font-medium">特徵精簡率 (Model Sparsity)</div>
+        <div class="text-2xl font-bold text-indigo-400 mt-1 flex items-baseline gap-2">
+          60%
+          <span class="text-xs font-medium text-indigo-300 bg-indigo-500/10 px-1.5 py-0.5 rounded">5 特徵 → 2 特徵</span>
+        </div>
+        <div class="text-xs text-slate-400 mt-1">自動排除行政支出與地理位置雜訊</div>
+        <div class="absolute -right-3 -bottom-3 w-16 h-16 bg-indigo-500/10 rounded-full blur-xl pointer-events-none"></div>
+      </div>
+    </section>
+
+    <!-- 核心視覺化區塊：特徵數量 vs 模型效能 (重現並拓展使用者圖片) -->
+    <section class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5 shadow-sm space-y-4">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-700/60 pb-4">
+        <div>
+          <h2 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+            <span> 特徵數量 vs 模型表現曲線 (k=1..5 Performance Curves)</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-0.5">點擊下方按鈕或選單，即時切換比對 5 大特徵選擇演算法在各特徵數下的變化趨勢</p>
+        </div>
+
+        <!-- 演算法切換器 -->
+        <div class="flex items-center gap-2">
+          <label for="methodSelect" class="text-xs text-slate-400 whitespace-nowrap">選擇演算法:</label>
+          <select id="methodSelect" onchange="updateCharts()" class="bg-slate-700/80 border border-slate-600 text-xs rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="user_ref" selected>使用者參考基準 (User Reference)</option>
+            <option value="skb">1. Filter: SelectKBest (F-test)</option>
+            <option value="sfs">2. Wrapper: SFS (Forward 逐步選擇)</option>
+            <option value="rfe">3. Wrapper: RFE (遞迴消除法)</option>
+            <option value="lasso">4. Embedded: Lasso (L1 正則化)</option>
+            <option value="rf">5. Embedded: Random Forest (樹模型重要度)</option>
+            <option value="all_compare">⚡ 疊加全 5 種方法同步對比</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 雙圖並列 (RMSE & R-squared) -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <!-- 圖 1: RMSE -->
+        <div class="bg-slate-900/70 border border-slate-800 rounded-lg p-4">
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-xs font-semibold text-slate-300">RMSE by Number of Features (越低越好)</span>
+            <span class="text-[11px] text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded">谷底: k=2 ($8,198.80)</span>
+          </div>
+          <div class="h-64 relative">
+            <canvas id="rmseChart"></canvas>
+          </div>
+        </div>
+
+        <!-- 圖 2: R-squared -->
+        <div class="bg-slate-900/70 border border-slate-800 rounded-lg p-4">
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-xs font-semibold text-slate-300">R-squared by Number of Features (越高越好)</span>
+            <span class="text-[11px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">高峰: k=2 (0.9474)</span>
+          </div>
+          <div class="h-64 relative">
+            <canvas id="r2Chart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- 當前選定演算法之逐步特徵明細面板 -->
+      <div class="bg-slate-900/50 border border-slate-800 rounded-lg p-4">
+        <h3 class="text-xs font-semibold text-slate-300 mb-2 flex items-center justify-between">
+          <span id="detailPanelTitle">使用者參考基準 — 各特徵數量選定組合與數據</span>
+          <span class="text-[11px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded font-normal">甜點區：特徵數 = 2</span>
+        </h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-800/80 text-slate-400">
+              <tr>
+                <th class="py-2 px-3 rounded-l">特徵數 (k)</th>
+                <th class="py-2 px-3">選取特徵集合 (Selected Features)</th>
+                <th class="py-2 px-3 text-right">RMSE ($)</th>
+                <th class="py-2 px-3 text-right rounded-r">判定係數 (R²)</th>
+              </tr>
+            </thead>
+            <tbody id="detailTableBody" class="divide-y divide-slate-800 text-slate-300">
+              <!-- 動態渲染 -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 即時線上新創公司利潤預測模擬器 -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      
+      <!-- 左側：輸入控制面板 (7 cols) -->
+      <div class="lg:col-span-7 bg-slate-800/60 border border-slate-700/60 rounded-xl p-5 space-y-4">
+        <div class="border-b border-slate-700/60 pb-3 flex justify-between items-center">
+          <div>
+            <h2 class="text-base font-bold text-white flex items-center gap-2">
+              <span> 互動式新創利潤推論模擬器 (Live Inference Simulator)</span>
+            </h2>
+            <p class="text-xs text-slate-400">調整資金配置，即時觀察全特徵模型 vs 最佳精簡模型 (k=2) 的預測表現</p>
+          </div>
+          <button onclick="resetInputs()" class="text-xs px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition">重設預設值</button>
+        </div>
+
+        <div class="space-y-4 text-xs">
+          <!-- 研發支出 -->
+          <div class="space-y-1">
+            <div class="flex justify-between">
+              <span class="font-medium text-slate-300">研發支出 (R&D Spend) <span class="text-emerald-400 font-bold">*核心驅動 (係數 ≈ 0.86)</span></span>
+              <span id="val_rd" class="font-bold text-blue-400 text-sm">$120,000</span>
+            </div>
+            <input id="slider_rd" type="range" min="0" max="200000" step="5000" value="120000" oninput="calculatePrediction()" class="w-full accent-blue-500">
+            <div class="flex justify-between text-[10px] text-slate-500"><span>$0</span><span>$100,000</span><span>$200,000</span></div>
+          </div>
+
+          <!-- 行銷推廣 -->
+          <div class="space-y-1">
+            <div class="flex justify-between">
+              <span class="font-medium text-slate-300">行銷推廣支出 (Marketing Spend) <span class="text-blue-400 font-semibold">*次要驅動 (係數 ≈ 0.03)</span></span>
+              <span id="val_mkt" class="font-bold text-blue-400 text-sm">$250,000</span>
+            </div>
+            <input id="slider_mkt" type="range" min="0" max="500000" step="10000" value="250000" oninput="calculatePrediction()" class="w-full accent-blue-500">
+            <div class="flex justify-between text-[10px] text-slate-500"><span>$0</span><span>$250,000</span><span>$500,000</span></div>
+          </div>
+
+          <!-- 行政管理 -->
+          <div class="space-y-1">
+            <div class="flex justify-between">
+              <span class="font-medium text-slate-300">行政管理支出 (Administration) <span class="text-slate-400 text-[11px]">(微弱負向相關，雜訊來源)</span></span>
+              <span id="val_adm" class="font-bold text-slate-300 text-sm">$100,000</span>
+            </div>
+            <input id="slider_adm" type="range" min="0" max="200000" step="5000" value="100000" oninput="calculatePrediction()" class="w-full accent-slate-500">
+            <div class="flex justify-between text-[10px] text-slate-500"><span>$0</span><span>$100,000</span><span>$200,000</span></div>
+          </div>
+
+          <!-- 所在州別 -->
+          <div class="space-y-1.5 pt-1">
+            <span class="font-medium text-slate-300">營運總部州別 (State) <span class="text-slate-400 text-[11px]">(統計檢定未達顯著)</span></span>
+            <div class="grid grid-cols-3 gap-2">
+              <button type="button" onclick="setState('California')" id="btn_ca" class="state-btn py-1.5 px-3 rounded-lg border border-blue-500/50 bg-blue-500/20 text-blue-300 font-medium">California</button>
+              <button type="button" onclick="setState('New York')" id="btn_ny" class="state-btn py-1.5 px-3 rounded-lg border border-slate-700 bg-slate-800 text-slate-400 hover:text-slate-200">New York</button>
+              <button type="button" onclick="setState('Florida')" id="btn_fl" class="state-btn py-1.5 px-3 rounded-lg border border-slate-700 bg-slate-800 text-slate-400 hover:text-slate-200">Florida</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右側：即時預測利潤對照 (5 cols) -->
+      <div class="lg:col-span-5 bg-gradient-to-br from-slate-800/80 to-slate-900/90 border border-slate-700/60 rounded-xl p-5 flex flex-col justify-between space-y-4">
+        <div>
+          <h3 class="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-3">雙模型即時利潤預測對比</h3>
+
+          <!-- 最佳黃金模型預測 (k=2) -->
+          <div class="bg-blue-950/40 border border-blue-500/40 rounded-xl p-4 mb-3 relative overflow-hidden">
+            <div class="flex justify-between items-center mb-1">
+              <span class="text-xs font-semibold text-blue-300 flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                最佳黃金模型預測 (k=2)
+              </span>
+              <span class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded">推薦部署</span>
+            </div>
+            <div class="text-3xl font-extrabold text-white tracking-tight" id="pred_golden">$0</div>
+            <div class="text-[11px] text-slate-400 mt-1 flex justify-between">
+              <span>使用變數: 研發 + 行銷</span>
+              <span class="text-blue-300">RMSE: $8,198.80</span>
+            </div>
+          </div>
+
+          <!-- 全特徵基準模型預測 (k=5) -->
+          <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 text-xs">
+            <div class="flex justify-between text-slate-400 mb-1">
+              <span>全特徵基準模型預測 (k=5):</span>
+              <span class="text-slate-300">RMSE: $9,137.99</span>
+            </div>
+            <div class="text-lg font-bold text-slate-300" id="pred_baseline">$0</div>
+            <div class="text-[11px] text-slate-500 mt-0.5">兩模型預測差額: <span id="pred_diff" class="text-slate-400 font-medium">$0</span></div>
+          </div>
+        </div>
+
+        <!-- 商業決策建議提示 -->
+        <div class="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-xs text-amber-200/90 space-y-1">
+          <div class="font-bold flex items-center gap-1.5 text-amber-300">
+            <span>💡 創投決策洞察</span>
+          </div>
+          <p class="text-[11px] leading-relaxed text-slate-300">
+            研發預算每增加 <span class="text-emerald-400 font-semibold">$1.00</span>，預期可為新創獲利帶來約 <span class="text-emerald-400 font-semibold">$0.80～$0.86</span> 的直接增益；反之行政開銷過高可能產生負邊際效益。
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 底部：CRISP-DM 6 大階段總結 -->
+    <section class="bg-slate-800/40 border border-slate-700/50 rounded-xl p-5 text-xs text-slate-300 space-y-3">
+      <h3 class="font-bold text-white text-sm">CRISP-DM 專案實踐總結</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-[11px] text-slate-400">
+        <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-800">
+          <span class="text-blue-400 font-semibold block mb-1">1~2. 商業與資料理解</span>
+          透過 50 家新創收支分析，確立獲利預測目標。確認無缺失值，並發現研發支出與獲利呈現高達 0.9729 的極強相關性。
+        </div>
+        <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-800">
+          <span class="text-blue-400 font-semibold block mb-1">3~4. 特徵選擇與建模</span>
+          嚴格測試 5 大特徵選擇演算法，一致驗證 k=2 為全域最佳甜點區（Sweet Spot），將前處理與 SFS 封裝入 Scikit-Learn Pipeline。
+        </div>
+        <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-800">
+          <span class="text-blue-400 font-semibold block mb-1">5~6. 評估與生產部署</span>
+          特徵篩選後測試集 RMSE 降至 $8,198.80，R² 升至 0.9474。已持久化為 <code class="text-amber-300">50_startups_pipeline.joblib</code>，支援線上自動化推論。
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="border-t border-slate-800 py-4 text-center text-xs text-slate-500">
+    50 Startups Multiple Linear Regression & Feature Selection Project • CRISP-DM Workflow • Powered by Scikit-Learn & Tailwind CSS
+  </footer>
+
+  <!-- 數據與圖表控制邏輯 -->
+  <script>
+    // 實驗數據字典
+    const experimentData = {
+      user_ref: {
+        name: "使用者參考基準 (User Reference)",
+        rmse: [8274.868, 8198.797, 8309.060, 8409.917, 9137.990],
+        r2: [0.946459, 0.947439, 0.946015, 0.944697, 0.934707],
+        features: [
+          "['R&D Spend']",
+          "['R&D Spend', 'Marketing Spend']",
+          "['R&D Spend', 'Marketing Spend', 'State_New York']",
+          "['R&D Spend', 'Marketing Spend', 'State_New York', 'State_Florida']",
+          "['R&D Spend', 'Marketing Spend', 'Administration', 'State_FL', 'State_NY']"
+        ]
+      },
+      skb: {
+        name: "1. Filter: SelectKBest (F-test)",
+        rmse: [8274.868, 8198.797, 8803.776, 8997.199, 9137.990],
+        r2: [0.946459, 0.947439, 0.939396, 0.936703, 0.934707],
+        features: [
+          "['R&D Spend']",
+          "['R&D Spend', 'Marketing Spend']",
+          "['R&D Spend', 'Marketing Spend', 'Administration']",
+          "['R&D Spend', 'Marketing Spend', 'Administration', 'State_New York']",
+          "['R&D Spend', 'Marketing Spend', 'Administration', 'State_NY', 'State_FL']"
+        ]
+      },
+      sfs: {
+        name: "2. Wrapper: SFS (Forward 逐步選擇)",
+        rmse: [8274.868, 8198.797, 8803.776, 8997.199, 9137.990],
+        r2: [0.946459, 0.947439, 0.939396, 0.936703, 0.934707],
+        features: [
+          "['R&D Spend']",
+          "['R&D Spend', 'Marketing Spend']",
+          "['R&D Spend', 'Administration', 'Marketing Spend']",
+          "['R&D Spend', 'Administration', 'Marketing Spend', 'State_New York']",
+          "['R&D Spend', 'Administration', 'Marketing Spend', 'State_FL', 'State_NY']"
+        ]
+      },
+      rfe: {
+        name: "3. Wrapper: RFE (遞迴消除法)",
+        rmse: [8274.868, 8198.797, 8803.776, 9068.541, 9137.990],
+        r2: [0.946459, 0.947439, 0.939396, 0.935696, 0.934707],
+        features: [
+          "['R&D Spend']",
+          "['R&D Spend', 'Marketing Spend']",
+          "['R&D Spend', 'Marketing Spend', 'Administration']",
+          "['R&D Spend', 'Marketing Spend', 'Administration', 'State_Florida']",
+          "['R&D Spend', 'Marketing Spend', 'Administration', 'State_FL', 'State_NY']"
+        ]
+      },
+      lasso: {
+        name: "4. Embedded: Lasso (L1 正則化)",
+        rmse: [8274.868, 8198.797, 8803.776, 8997.199, 9137.990],
+        r2: [0.946459, 0.947439, 0.939396, 0.936703, 0.934707],
+        features: [
+          "['R&D Spend']",
+          "['R&D Spend', 'Marketing Spend']",
+          "['R&D Spend', 'Marketing Spend', 'Administration']",
+          "['R&D Spend', 'Marketing Spend', 'Administration', 'State_New York']",
+          "['R&D Spend', 'Marketing Spend', 'Administration', 'State_NY', 'State_FL']"
+        ]
+      },
+      rf: {
+        name: "5. Embedded: Random Forest (樹重要度)",
+        rmse: [8274.868, 8198.797, 8803.776, 9068.541, 9137.990],
+        r2: [0.946459, 0.947439, 0.939396, 0.935696, 0.934707],
+        features: [
+          "['R&D Spend']",
+          "['R&D Spend', 'Marketing Spend']",
+          "['R&D Spend', 'Marketing Spend', 'Administration']",
+          "['R&D Spend', 'Marketing Spend', 'Administration', 'State_Florida']",
+          "['R&D Spend', 'Marketing Spend', 'Administration', 'State_FL', 'State_NY']"
+        ]
+      }
+    };
+
+    let selectedState = 'California';
+    let rmseChartInstance = null;
+    let r2ChartInstance = null;
+
+    // 初始化 Chart.js
+    function initCharts() {
+      const ctxRmse = document.getElementById('rmseChart').getContext('2d');
+      const ctxR2 = document.getElementById('r2Chart').getContext('2d');
+
+      const chartOptions = (yTitle, isMin) => ({
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { color: '#cbd5e1', font: { size: 11 } } },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString(undefined, {minimumFractionDigits: isMin ? 2 : 6})}`
+            }
+          }
+        },
+        scales: {
+          x: {
+            title: { display: true, text: 'Number of Features (k)', color: '#94a3b8', font: { size: 11 } },
+            ticks: { color: '#94a3b8' },
+            grid: { color: 'rgba(51, 65, 85, 0.4)' }
+          },
+          y: {
+            title: { display: true, text: yTitle, color: '#94a3b8', font: { size: 11 } },
+            ticks: { color: '#94a3b8' },
+            grid: { color: 'rgba(51, 65, 85, 0.4)' }
+          }
+        }
+      });
+
+      rmseChartInstance = new Chart(ctxRmse, {
+        type: 'line',
+        data: { labels: [1, 2, 3, 4, 5], datasets: [] },
+        options: chartOptions('RMSE ($)', true)
+      });
+
+      r2ChartInstance = new Chart(ctxR2, {
+        type: 'line',
+        data: { labels: [1, 2, 3, 4, 5], datasets: [] },
+        options: chartOptions('R-squared', false)
+      });
+
+      updateCharts();
+    }
+
+    // 更新圖表與表格
+    function updateCharts() {
+      const mode = document.getElementById('methodSelect').value;
+      const kLabels = [1, 2, 3, 4, 5];
+
+      if (mode === 'all_compare') {
+        // 同步疊加比對
+        const colors = {
+          user_ref: '#3b82f6',
+          skb: '#f97316',
+          sfs: '#10b981',
+          rfe: '#ef4444',
+          lasso: '#a855f7',
+          rf: '#ec4899'
+        };
+
+        rmseChartInstance.data.datasets = Object.keys(experimentData).map(key => ({
+          label: experimentData[key].name,
+          data: experimentData[key].rmse,
+          borderColor: colors[key],
+          backgroundColor: colors[key],
+          borderWidth: key === 'user_ref' ? 3 : 1.5,
+          borderDash: key === 'user_ref' ? [] : [4, 4],
+          pointRadius: 4,
+          tension: 0.1
+        }));
+
+        r2ChartInstance.data.datasets = Object.keys(experimentData).map(key => ({
+          label: experimentData[key].name,
+          data: experimentData[key].r2,
+          borderColor: colors[key],
+          backgroundColor: colors[key],
+          borderWidth: key === 'user_ref' ? 3 : 1.5,
+          borderDash: key === 'user_ref' ? [] : [4, 4],
+          pointRadius: 4,
+          tension: 0.1
+        }));
+
+        renderTable('user_ref');
+        document.getElementById('detailPanelTitle').innerText = "各方法特徵選擇全覽 (基準展示：使用者參考組合)";
+      } else {
+        const item = experimentData[mode];
+        rmseChartInstance.data.datasets = [{
+          label: item.name + ' (RMSE)',
+          data: item.rmse,
+          borderColor: '#3b82f6',
+          backgroundColor: '#3b82f6',
+          borderWidth: 2.5,
+          pointRadius: 5,
+          pointBackgroundColor: item.rmse.map((v, i) => i === 1 ? '#10b981' : '#3b82f6'),
+          tension: 0.1
+        }];
+
+        r2ChartInstance.data.datasets = [{
+          label: item.name + ' (R²)',
+          data: item.r2,
+          borderColor: '#10b981',
+          backgroundColor: '#10b981',
+          borderWidth: 2.5,
+          pointRadius: 5,
+          pointBackgroundColor: item.r2.map((v, i) => i === 1 ? '#f59e0b' : '#10b981'),
+          tension: 0.1
+        }];
+
+        renderTable(mode);
+        document.getElementById('detailPanelTitle').innerText = `${item.name} — 各特徵數量選定組合與指標`;
+      }
+
+      rmseChartInstance.update();
+      r2ChartInstance.update();
+    }
+
+    // 渲染明細表格
+    function renderTable(key) {
+      const item = experimentData[key];
+      const tbody = document.getElementById('detailTableBody');
+      tbody.innerHTML = '';
+
+      for (let i = 0; i < 5; i++) {
+        const isSweet = (i === 1);
+        const tr = document.createElement('tr');
+        tr.className = isSweet ? "bg-blue-900/30 font-semibold text-white border-l-2 border-blue-400" : "hover:bg-slate-800/50";
+        tr.innerHTML = `
+          <td class="py-2.5 px-3 flex items-center gap-1.5">
+            ${i + 1}
+            ${isSweet ? '<span class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1 py-0.2 rounded font-normal">最佳</span>' : ''}
+          </td>
+          <td class="py-2.5 px-3 font-mono text-[11px] text-slate-300">${item.features[i]}</td>
+          <td class="py-2.5 px-3 text-right font-mono ${isSweet ? 'text-emerald-400 font-bold' : ''}">$${item.rmse[i].toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+          <td class="py-2.5 px-3 text-right font-mono ${isSweet ? 'text-blue-400 font-bold' : ''}">${item.r2[i].toFixed(6)}</td>
+        `;
+        tbody.appendChild(tr);
+      }
+    }
+
+    // 狀態切換
+    function setState(state) {
+      selectedState = state;
+      ['ca', 'ny', 'fl'].forEach(id => {
+        const btn = document.getElementById('btn_' + id);
+        btn.className = "state-btn py-1.5 px-3 rounded-lg border border-slate-700 bg-slate-800 text-slate-400 hover:text-slate-200";
+      });
+      const activeBtn = state === 'California' ? 'btn_ca' : (state === 'New York' ? 'btn_ny' : 'btn_fl');
+      document.getElementById(activeBtn).className = "state-btn py-1.5 px-3 rounded-lg border border-blue-500/50 bg-blue-500/20 text-blue-300 font-medium";
+      calculatePrediction();
+    }
+
+    // 即時利潤推論計算
+    function calculatePrediction() {
+      const rd = parseFloat(document.getElementById('slider_rd').value);
+      const mkt = parseFloat(document.getElementById('slider_mkt').value);
+      const adm = parseFloat(document.getElementById('slider_adm').value);
+
+      document.getElementById('val_rd').innerText = `$${rd.toLocaleString()}`;
+      document.getElementById('val_mkt').innerText = `$${mkt.toLocaleString()}`;
+      document.getElementById('val_adm').innerText = `$${adm.toLocaleString()}`;
+
+      // 1. 最佳黃金模型 (k=2: R&D + Marketing)
+      // Equation: Profit = 47812.38 + 0.7966 * RD + 0.0299 * MKT
+      const predGolden = 47812.38 + (0.7966 * rd) + (0.0299 * mkt);
+
+      // 2. 全特徵基準模型 (k=5: RD, Admin, MKT, FL, NY)
+      // Intercept: 54028.04, Admin: -0.0688, State_FL: 938.79, State_NY: 6.99
+      let stateFL = (selectedState === 'Florida') ? 1.0 : 0.0;
+      let stateNY = (selectedState === 'New York') ? 1.0 : 0.0;
+      const predBase = 54028.04 + (0.8056 * rd) - (0.0688 * adm) + (0.0299 * mkt) + (938.79 * stateFL) + (6.99 * stateNY);
+
+      document.getElementById('pred_golden').innerText = `$${predGolden.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+      document.getElementById('pred_baseline').innerText = `$${predBase.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+      const diff = predGolden - predBase;
+      const diffSign = diff >= 0 ? "+$" : "-$";
+      document.getElementById('pred_diff').innerText = `${diffSign}${Math.abs(diff).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    }
+
+    function resetInputs() {
+      document.getElementById('slider_rd').value = 120000;
+      document.getElementById('slider_mkt').value = 250000;
+      document.getElementById('slider_adm').value = 100000;
+      setState('California');
+    }
+
+    // 啟動加載
+    window.onload = function() {
+      initCharts();
+      calculatePrediction();
+    };
+  </script>
+</body>
+</html>
